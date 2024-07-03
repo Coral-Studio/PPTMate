@@ -1,44 +1,100 @@
-﻿#include<iostream>
-#include<cstdio>
-#include<string>
-#include<windows.h>
+﻿#include <windows.h>
+#include <iostream>
+#include <string>
+#include <atlstr.h>
 
 using namespace std;
 
-const string pptexe_path = "\"C:\\Program Files\\Microsoft Office\\root\\Office16\"";
-const string pptexe_name = "POWERPNT.EXE";
-const string des_path = "F:\\PPTBACKUP\\";
+CString PowerPnt_Path,
+		ArchiveFolder_Path;
 
-string file_path, sub_folder;
+int IsCreateSubfolder;
 
-inline static void DoCmd(string cmd) {
-	// cout<<"> "<<cmd<<endl;
-	WinExec(("cmd.exe /c " + cmd).c_str(), SW_HIDE);
-	Sleep(100);
+
+//string WCharToMByte(LPCWSTR lpcwszStr)
+//{
+//	string str;
+//	DWORD dwMinSize = 0;
+//	LPSTR lpszStr = NULL;
+//	dwMinSize = WideCharToMultiByte(CP_OEMCP, NULL, lpcwszStr, -1, NULL, 0, NULL, FALSE);
+//	if (0 == dwMinSize)
+//	{
+//		return FALSE;
+//	}
+//	lpszStr = new char[dwMinSize];
+//	WideCharToMultiByte(CP_OEMCP, NULL, lpcwszStr, -1, lpszStr, dwMinSize, NULL, FALSE);
+//	str = lpszStr;
+//	delete[] lpszStr;
+//	return str;
+//}
+
+BOOL IsPathExist(const CString& csPath)
+{
+	int nRet = _taccess(csPath, 0);
+	return 0 == nRet || EACCES == nRet;
 }
 
-inline string GetTimeStr() {
-	SYSTEMTIME tt;
+inline CString GetFileNameFromPath(string path) {
+	int index = path.find_last_of('\\');
+	string res = path.substr(index + 1, path.size() - (index + 1));
+	return (CString)res.c_str();
+}
+
+inline CString GetTimeStr() {
+	SYSTEMTIME currentTime;
 	char res[20];
 
-	GetLocalTime(&tt);
-	snprintf(res, 20, "%d-%d-%d", tt.wYear, tt.wMonth, tt.wDay);
+	GetLocalTime(&currentTime);
+	snprintf(res, 20, "%d-%d-%d", currentTime.wYear, currentTime.wMonth, currentTime.wDay);
 
-	string str = res;
-	return str;
+	return res;
 }
 
 int main(int argc, char* argv[]) {
+	std::cout << "Debug Info:" << std::endl << std::endl;
+
+	//Preload configures
+	CString tempIsCreateSubfolder;
+	GetPrivateProfileString(_T("Path"), _T("powerpoint"), _T("C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE"), PowerPnt_Path.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
+	GetPrivateProfileString(_T("Path"), _T("archive_folder"), _T("D:\\PPTBACKUP"), ArchiveFolder_Path.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
+	GetPrivateProfileString(_T("Setting"), _T("is_create_subfolder"), _T("true"), tempIsCreateSubfolder.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
+	if (tempIsCreateSubfolder == "true") IsCreateSubfolder = 1;
+	else IsCreateSubfolder = 0;
+	wprintf(L"%s %s %s\n", PowerPnt_Path.GetString(), ArchiveFolder_Path.GetString(), tempIsCreateSubfolder.GetString());
+
+	if (!IsPathExist(PowerPnt_Path)) {
+		printf("[Error] Powerpoint executable file not vaild\n");
+		return 0;
+	}
+
 	if (argc < 2) return 0;
 
-	file_path = argv[1];
-	file_path = "\"" + file_path + "\"";
+	CString filePath, fileName, subfolderName, destFolderPath, destFilePath;
 
-	sub_folder = GetTimeStr();
+	filePath = argv[1];
+	fileName = GetFileNameFromPath((string)(CT2A(filePath)));
+	subfolderName = GetTimeStr();
+	if (IsCreateSubfolder) destFolderPath.Format(L"%s\\%s", ArchiveFolder_Path.GetString(), subfolderName.GetString());
+	else destFolderPath = ArchiveFolder_Path;
+	destFilePath.Format(L"%s\\%s", destFolderPath.GetString(),fileName.GetString());
 
-	DoCmd("cd /d " + des_path + " && mkdir " + sub_folder);
-	DoCmd("copy " + file_path + " " + des_path + sub_folder);
-	DoCmd("cd /d " + pptexe_path + " && start " + pptexe_name + " " + file_path);
+
+	wprintf(L"%s %s %s %s %s\n",
+		filePath.GetString(),
+		fileName.GetString(),
+		subfolderName.GetString(),
+		destFolderPath.GetString(),
+		destFilePath.GetString()
+	);
+
+	CreateDirectory(ArchiveFolder_Path.GetString(), NULL);
+	if(IsCreateSubfolder) CreateDirectory(destFolderPath.GetString(), NULL);
+	CopyFile(filePath.GetString(), destFilePath.GetString(), FALSE);
+	
+	CString curCmd;
+	curCmd.Format(L"cmd.exe /c start \"%s\" \"%s\"", PowerPnt_Path.GetString(), filePath.GetString());
+	wprintf(L"%s\n", curCmd.GetString());
+	WinExec(CT2A(curCmd), SW_HIDE);
 
 	return 0;
 }

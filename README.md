@@ -7,9 +7,12 @@ A simple tool which can save the copies of  Powerpoint files to a certain folder
 
 ## Todo
 
-1. Depart configures into `.ini` files.
+- Automatically recognize the location of Powerpoint executable file.
+- Add more command line options in future.
 
 ## Release Note
+
+**0.4.0** Depart configurations into `.ini` files & Add a switch in configuration to control whether create a subfolder named by the date & Big format standardization.
 
 **0.3.1** Increase opening speed and fix some bugs.
 

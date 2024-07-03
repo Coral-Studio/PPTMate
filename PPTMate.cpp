@@ -11,23 +11,6 @@ CString PowerPnt_Path,
 int IsCreateSubfolder;
 
 
-//string WCharToMByte(LPCWSTR lpcwszStr)
-//{
-//	string str;
-//	DWORD dwMinSize = 0;
-//	LPSTR lpszStr = NULL;
-//	dwMinSize = WideCharToMultiByte(CP_OEMCP, NULL, lpcwszStr, -1, NULL, 0, NULL, FALSE);
-//	if (0 == dwMinSize)
-//	{
-//		return FALSE;
-//	}
-//	lpszStr = new char[dwMinSize];
-//	WideCharToMultiByte(CP_OEMCP, NULL, lpcwszStr, -1, lpszStr, dwMinSize, NULL, FALSE);
-//	str = lpszStr;
-//	delete[] lpszStr;
-//	return str;
-//}
-
 BOOL IsPathExist(const CString& csPath)
 {
 	int nRet = _taccess(csPath, 0);
@@ -37,6 +20,12 @@ BOOL IsPathExist(const CString& csPath)
 inline CString GetFileNameFromPath(string path) {
 	int index = path.find_last_of('\\');
 	string res = path.substr(index + 1, path.size() - (index + 1));
+	return (CString)res.c_str();
+}
+
+inline CString GetFileFolderFromPath(string path) {
+	int index = path.find_last_of('\\');
+	string res = path.substr(0, index);
 	return (CString)res.c_str();
 }
 
@@ -54,6 +43,11 @@ int main(int argc, char* argv[]) {
 	std::cout << "Debug Info:" << std::endl << std::endl;
 
 	//Preload configures
+	CString cwdPath;
+	GetModuleFileName(NULL, cwdPath.GetBuffer(MAX_PATH), MAX_PATH);
+	//wprintf(L"path:%s\n", szPath.GetString());
+	SetCurrentDirectory(GetFileFolderFromPath((string)(CT2A(cwdPath))));
+
 	CString tempIsCreateSubfolder;
 	GetPrivateProfileString(_T("Path"), _T("powerpoint"), _T("C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE"), PowerPnt_Path.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
 	GetPrivateProfileString(_T("Path"), _T("archive_folder"), _T("D:\\PPTBACKUP"), ArchiveFolder_Path.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
@@ -76,7 +70,7 @@ int main(int argc, char* argv[]) {
 	subfolderName = GetTimeStr();
 	if (IsCreateSubfolder) destFolderPath.Format(L"%s\\%s", ArchiveFolder_Path.GetString(), subfolderName.GetString());
 	else destFolderPath = ArchiveFolder_Path;
-	destFilePath.Format(L"%s\\%s", destFolderPath.GetString(),fileName.GetString());
+	destFilePath.Format(L"%s\\%s", destFolderPath.GetString(), fileName.GetString());
 
 
 	wprintf(L"%s %s %s %s %s\n",
@@ -87,14 +81,23 @@ int main(int argc, char* argv[]) {
 		destFilePath.GetString()
 	);
 
-	CreateDirectory(ArchiveFolder_Path.GetString(), NULL);
-	if(IsCreateSubfolder) CreateDirectory(destFolderPath.GetString(), NULL);
-	CopyFile(filePath.GetString(), destFilePath.GetString(), FALSE);
-	
 	CString curCmd;
-	curCmd.Format(L"cmd.exe /c start \"%s\" \"%s\"", PowerPnt_Path.GetString(), filePath.GetString());
-	wprintf(L"%s\n", curCmd.GetString());
+
+	CreateDirectory(ArchiveFolder_Path.GetString(), NULL);
+	if (IsCreateSubfolder) CreateDirectory(destFolderPath.GetString(), NULL);
+	CopyFile(filePath.GetString(), destFilePath.GetString(), FALSE);
+	//curCmd.Format(L"cmd.exe /c mkdir \"%s\"", destFolderPath.GetString());
+	//WinExec(CT2A(curCmd), SW_HIDE);
+	//wprintf(L"%s\n", curCmd.GetString());
+
+	CopyFile(filePath.GetString(), destFilePath.GetString(), FALSE);
+	//curCmd.Format(L"cmd.exe /c copy %s %s", filePath.GetString(), destFolderPath.GetString());
+	//WinExec(CT2A(curCmd), SW_HIDE);
+	//wprintf(L"%s\n", curCmd.GetString());
+
+	curCmd.Format(L"cmd.exe /c cd /d \"%s\" && start %s \"%s\"", GetFileFolderFromPath((string)(CT2A(PowerPnt_Path))).GetString(), GetFileNameFromPath((string)(CT2A(PowerPnt_Path))).GetString(), filePath.GetString());
 	WinExec(CT2A(curCmd), SW_HIDE);
+	//wprintf(L"%s\n", curCmd.GetString());
 
 	return 0;
 }

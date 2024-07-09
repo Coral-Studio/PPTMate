@@ -3,7 +3,19 @@ A simple tool which can save the copies of  Powerpoint files to a certain folder
 
 ## Module
 
+### PPTMate
+
 - Copy the Powerpoint file to a certain folder while open it.
+- You can choose whether put the file into a subfolder named with date. Change this setting in `config.ini`.
+
+### PPTMateStartup
+
+*Better to use TDM-GCC 9.2 to compile `PPTMateStartup.cpp`*
+
+**WARNING: This function involves registry modification and is hard reversible. So it will be not added into release. Please make sure what you are doing while using it.**
+
+- Register to associate the opening methods of `.pptx` and `.ppt` files.
+- Turn off the function of Powerpoint detecting whether itself is the default opening method.
 
 ## Todo
 

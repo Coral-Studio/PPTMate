@@ -21,7 +21,7 @@ static int ReadReg(HKEY rootKey, TCHAR* regPath, TCHAR* regKey, TCHAR* regValue)
 	}
 
 	DWORD dwType = REG_SZ;
-	DWORD cbData = 256;
+	DWORD cbData = 256 * sizeof(TCHAR);
 	ret = RegQueryValueEx(hKey, regKey, NULL, &dwType, (LPBYTE)regValue, &cbData);
 	if (ret == ERROR_SUCCESS)
 	{
@@ -52,14 +52,12 @@ static inline CString GetFileFolderFromPath(CString path) {
 	return path.Left(index);
 }
 
-static inline CString GetTimeStr() {
-	SYSTEMTIME currentTime;
-	char res[20];
-
-	GetLocalTime(&currentTime);
-	snprintf(res, 20, "%d-%d-%d", currentTime.wYear, currentTime.wMonth, currentTime.wDay);
-
-	return res;
+CString GetTimeStr() {
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    CString s;
+    s.Format(_T("%04d-%02d-%02d"), st.wYear, st.wMonth, st.wDay);
+    return s;
 }
 
 int main(int argc, char* argv[]) {
@@ -71,14 +69,23 @@ int main(int argc, char* argv[]) {
 	//wprintf(L"path:%s\n", szPath.GetString());
 	SetCurrentDirectory(GetFileFolderFromPath(cwdPath));
 
+	TCHAR configPath[MAX_PATH];
+	GetModuleFileName(NULL, configPath, MAX_PATH);
+	PathRemoveFileSpec(configPath);
+	PathAppend(configPath, _T("config.ini"));
+
 	CString tempIsCreateSubfolder, tempIsPowerpntPathOverride;
-	GetPrivateProfileString(_T("Path"), _T("powerpoint"), _T("C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE"), PowerPnt_Path.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
-	GetPrivateProfileString(_T("Path"), _T("powerpoint_path_override"), _T("false"), tempIsPowerpntPathOverride.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
-	GetPrivateProfileString(_T("Path"), _T("archive_folder"), _T("F:\\PPTBACKUP"), ArchiveFolder_Path.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
-	GetPrivateProfileString(_T("Setting"), _T("is_create_subfolder"), _T("true"), tempIsCreateSubfolder.GetBuffer(MAX_PATH), MAX_PATH, _T(".\\config.ini"));
-	if (tempIsPowerpntPathOverride == "true") IsPowerpntPathOverride = 1;
+	GetPrivateProfileString(_T("Path"), _T("powerpoint"), _T("C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE"), PowerPnt_Path.GetBuffer(MAX_PATH), MAX_PATH, configPath);
+	PowerPnt_Path.ReleaseBuffer();
+	GetPrivateProfileString(_T("Path"), _T("powerpoint_path_override"), _T("false"), tempIsPowerpntPathOverride.GetBuffer(MAX_PATH), MAX_PATH, configPath);
+	tempIsPowerpntPathOverride.ReleaseBuffer();
+	GetPrivateProfileString(_T("Path"), _T("archive_folder"), _T("F:\\PPTBACKUP"), ArchiveFolder_Path.GetBuffer(MAX_PATH), MAX_PATH, configPath);
+	ArchiveFolder_Path.ReleaseBuffer();
+	GetPrivateProfileString(_T("Setting"), _T("is_create_subfolder"), _T("true"), tempIsCreateSubfolder.GetBuffer(MAX_PATH), MAX_PATH, configPath);
+	tempIsCreateSubfolder.ReleaseBuffer();
+	if (tempIsPowerpntPathOverride == _T("true")) IsPowerpntPathOverride = 1;
 	else IsPowerpntPathOverride = 0;
-	if (tempIsCreateSubfolder == "true") IsCreateSubfolder = 1;
+	if (tempIsCreateSubfolder == _T("true")) IsCreateSubfolder = 1;
 	else IsCreateSubfolder = 0;
 
 	if(IsPowerpntPathOverride == 0)
@@ -103,6 +110,7 @@ int main(int argc, char* argv[]) {
 	filePath = argv[1];
 	fileName = GetFileNameFromPath(filePath);
 	subfolderName = GetTimeStr();
+	
 	if (IsCreateSubfolder) destFolderPath.Format(L"%s\\%s", ArchiveFolder_Path.GetString(), subfolderName.GetString());
 	else destFolderPath = ArchiveFolder_Path;
 	destFilePath.Format(L"%s\\%s", destFolderPath.GetString(), fileName.GetString());
